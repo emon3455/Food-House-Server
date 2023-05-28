@@ -44,6 +44,33 @@ async function run() {
       return res.send(result);
     })
 
+    // make admin
+    app.patch("/users/admin/:id", async(req,res)=>{
+      const id = req.params.id;
+      console.log(id);
+      const query = {_id: new ObjectId(id)}
+
+      const updatedDoc={
+        $set:{
+          role: "admin"
+        },
+      }
+
+      const result = await usersCollections.updateOne(query,updatedDoc);
+      res.send(result);
+
+    })
+
+    // delete user
+    app.delete("/users/:id", async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await usersCollections.deleteOne(query);
+      res.send(result);
+    })
+
+
+
     // adding user
     app.post("/users", async(req,res)=>{
       const user = req.body;

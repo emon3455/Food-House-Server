@@ -30,22 +30,36 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const usersCollections = client.db("foodHouseDB").collection("users");
     const menuCollections = client.db("foodHouseDB").collection("menu");
     const reviewsCollections = client.db("foodHouseDB").collection("reviews");
     const cartCollections = client.db("foodHouseDB").collection("carts");
 
+
+    // users api
+    app.post("/users", async(req,res)=>{
+      const user = req.body;
+      console.log(user);
+      const result = await usersCollections.insertOne(user);
+      res.send(result);
+    });
+
+
+    // menu api
     app.get("/menu", async(req,res)=>{
         const result = await menuCollections.find({}).toArray();
         res.send(result);
     })
 
+    // reviews api
     app.get("/reviews", async(req,res)=>{
         const result = await reviewsCollections.find({}).toArray();
         res.send(result);
     })
 
-    // carts colletions apis:
 
+
+    // carts colletions apis:
     // read from cart
     app.get("/carts",async (req,res)=>{
       const email = req.query.email;
@@ -72,6 +86,9 @@ async function run() {
       const result = await cartCollections.deleteOne(query);
       res.send(result);
     })
+
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

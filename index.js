@@ -37,6 +37,14 @@ async function run() {
 
 
     // users api
+
+    // read add user
+    app.get("/users",async(req,res)=>{
+      const result = await usersCollections.find().toArray()
+      return res.send(result);
+    })
+
+    // adding user
     app.post("/users", async(req,res)=>{
       const user = req.body;
       console.log(user);

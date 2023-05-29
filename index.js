@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require('jsonwebtoken');
 const app = express();
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -9,8 +10,25 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// 
-// 
+const varifyJWT = (req, res, next) => {
+  const authrization = req.headers.authorization;
+
+  if (!authrization) {
+    return res.status(401).send({ error: true, message: "unauthorised Access" });
+  }
+
+  const token = authrization.split(" ")[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ error: true, message: "unauthorised Access" })
+    }
+    req.decoded = decoded;
+    next();
+  })
+
+}
+
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -36,35 +54,46 @@ async function run() {
     const cartCollections = client.db("foodHouseDB").collection("carts");
 
 
+    // --------jwt-------:
+    // jwt token:
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1hr"
+      })
+      res.send({ token })
+    })
+
+
+
     // users api
 
     // read add user
-    app.get("/users",async(req,res)=>{
-      const result = await usersCollections.find().toArray()
+    app.get("/users", async (req, res) => {
+      const result = await usersCollections.find().toArray();
       return res.send(result);
     })
 
     // make admin
-    app.patch("/users/admin/:id", async(req,res)=>{
+    app.patch("/users/admin/:id", async (req, res) => {
       const id = req.params.id;
-      console.log(id);
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) }
 
-      const updatedDoc={
-        $set:{
+      const updatedDoc = {
+        $set: {
           role: "admin"
         },
       }
 
-      const result = await usersCollections.updateOne(query,updatedDoc);
+      const result = await usersCollections.updateOne(query, updatedDoc);
       res.send(result);
 
     })
 
     // delete user
-    app.delete("/users/:id", async(req,res)=>{
+    app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await usersCollections.deleteOne(query);
       res.send(result);
     })
@@ -72,15 +101,14 @@ async function run() {
 
 
     // adding user
-    app.post("/users", async(req,res)=>{
+    app.post("/users", async (req, res) => {
       const user = req.body;
       console.log(user);
 
-      const query = {email: user.email};
+      const query = { email: user.email };
       const existingUser = await usersCollections.findOne(query);
-      console.log(existingUser);
 
-      if(existingUser){
+      if (existingUser) {
         return res.send({});
       }
 
@@ -91,48 +119,54 @@ async function run() {
 
 
     // menu api
-    app.get("/menu", async(req,res)=>{
-        const result = await menuCollections.find({}).toArray();
-        res.send(result);
+    app.get("/menu", async (req, res) => {
+      const result = await menuCollections.find({}).toArray();
+      res.send(result);
     })
 
     // reviews api
-    app.get("/reviews", async(req,res)=>{
-        const result = await reviewsCollections.find({}).toArray();
-        res.send(result);
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewsCollections.find({}).toArray();
+      res.send(result);
     })
 
 
 
     // carts colletions apis:
     // read from cart
-    app.get("/carts",async (req,res)=>{
+    app.get("/carts", varifyJWT, async (req, res) => {
+
       const email = req.query.email;
-      if(!email){
+
+      if (!email) {
         res.send([]);
       }
-      const query={email:email};
+
+      const decodedEmail = req.decoded.email;
+      if(email!==decodedEmail){
+        return res.status(403).send({error: true, message:"forbidden Access"});
+      }
+
+      const query = { email: email };
       const result = await cartCollections.find(query).toArray();
       res.send(result);
-      
+
     });
 
     // add to cart
-    app.post("/carts", async(req,res)=>{
+    app.post("/carts", async (req, res) => {
       const item = req.body;
       const result = await cartCollections.insertOne(item);
       res.send(result);
     });
 
     // delete from cart
-    app.delete("/carts/:id",async(req,res)=>{
+    app.delete("/carts/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) }
       const result = await cartCollections.deleteOne(query);
       res.send(result);
     })
-
-
 
 
     // Send a ping to confirm a successful connection
@@ -146,11 +180,11 @@ async function run() {
 run().catch(console.dir);
 
 
-app.get("/", (req,res)=>{
-    res.send("food house network is running...");
+app.get("/", (req, res) => {
+  res.send("food house network is running...");
 })
 
 
-app.listen(port, (req,res)=>{
-    console.log(`food house API is running on port: ${port}`);
+app.listen(port, (req, res) => {
+  console.log(`food house API is running on port: ${port}`);
 })

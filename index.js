@@ -59,19 +59,44 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1hr"
+        expiresIn: "24hr"
       })
       res.send({ token })
     })
 
 
+    // middle wire for verifyAdmin:
+    const verifyAdmin = async(req,res,next)=>{
+      const email = req.decoded.email;
+      const query = {email: email};
+      const user = await usersCollections.findOne(query)
+      if(user?.role !== "admin"){
+        return res.status(403).send({error: true, message: "forbidded Access"});
+      }
+      next();
+    }
+
 
     // users api
 
     // read add user
-    app.get("/users", async (req, res) => {
+    app.get("/users", varifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollections.find().toArray();
       return res.send(result);
+    })
+
+    // check admin :
+    app.get("/users/admin/:email", varifyJWT, async(req,res)=>{
+      const email = req.params.email;
+
+      if(req.decoded.email !== email){
+        res.send({admin: false});
+      }
+
+      const query = {email : email};
+      const user = await usersCollections.findOne(query);
+      const result = {admin: user?.role === "admin"};
+      res.send(result);
     })
 
     // make admin
@@ -103,7 +128,6 @@ async function run() {
     // adding user
     app.post("/users", async (req, res) => {
       const user = req.body;
-      console.log(user);
 
       const query = { email: user.email };
       const existingUser = await usersCollections.findOne(query);

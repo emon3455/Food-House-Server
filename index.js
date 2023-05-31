@@ -146,6 +146,15 @@ async function run() {
     app.get("/menu", async (req, res) => {
       const result = await menuCollections.find({}).toArray();
       res.send(result);
+    });
+
+    // add item on menu:
+    app.post("/menu", varifyJWT, verifyAdmin, async(req,res)=>{
+
+      const item = req.body;
+      const result = await menuCollections.insertOne(item);
+      res.send(result);
+
     })
 
     // reviews api

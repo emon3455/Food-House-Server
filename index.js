@@ -59,7 +59,7 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "24hr"
+        expiresIn: "84hr"
       })
       res.send({ token })
     })
@@ -155,6 +155,14 @@ async function run() {
       const result = await menuCollections.insertOne(item);
       res.send(result);
 
+    })
+
+    // delete menu item:
+    app.delete("/menu/:id", varifyJWT, verifyAdmin, async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await menuCollections.deleteOne(query);
+      res.send(result);
     })
 
     // reviews api

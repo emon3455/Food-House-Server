@@ -215,7 +215,7 @@ async function run() {
     // create payment intent
     app.post('/create-payment-intent', varifyJWT, async (req, res) => {
       const { price } = req.body;
-      const amount = Math.round(price * 100);
+      const amount = parseInt(price * 100);
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: 'usd',
@@ -237,6 +237,24 @@ async function run() {
       const deleteResult = await cartCollections.deleteMany(query);
 
       res.send({insertedResult, deleteResult});
+    })
+
+    // admin stats:
+    app.get("/admin-stats", varifyJWT, verifyAdmin, async(req,res)=>{
+      const users = await usersCollections.estimatedDocumentCount();
+      const products = await menuCollections.estimatedDocumentCount();
+      const orders = await paymentCollections.estimatedDocumentCount();
+
+      const payments = await paymentCollections.find().toArray();
+      const revenue = payments.reduce( (sum, payment)=> sum + payment.price, 0)
+
+      res.send({
+        users,
+        products,
+        orders,
+        revenue
+      })
+
     })
 
 
